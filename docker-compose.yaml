@@ -26,6 +26,37 @@ services:
     networks:
       - iot
 
+  ups-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: final
+      secrets:
+        - github_token
+    container_name: ups-web-prod
+    environment:
+      - ENVIRONMENT_NAME=prod
+      - NUT_HOST=nut-prod
+      - NUT_UPS_NAME=eaton
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/service-account.json
+    volumes:
+      - /srv/shared/mosquitto/secrets/burns-agentspace-40a6a96a259d.json:/app/secrets/service-account.json:ro
+    ports:
+      - "8308:8000"
+    restart: unless-stopped
+    networks:
+      - iot
+      - frontend
+    depends_on:
+      nut:
+        condition: service_healthy
+
+secrets:
+  github_token:
+    file: ~/.github_token
+
 networks:
   iot:
+    external: true
+  frontend:
     external: true

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Power Play</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wings: '#CE1126',
+                        'wings-dark': '#A00D1E',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .pulse-slow { animation: pulse-slow 2s ease-in-out infinite; }
+        body.on-battery { background-color: #2a1a0a !important; }
+    </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen" id="body">
+    <!-- Header -->
+    <header class="bg-wings px-6 py-4">
+        <h1 class="text-2xl font-bold tracking-tight">⚡ The Power Play</h1>
+        <p class="text-white/70 text-sm">Eaton Server Rack UPS</p>
+    </header>
+
+    <!-- Status Banner (hidden by default, shown on battery) -->
+    <div id="banner" class="hidden bg-red-700 text-white text-center py-2 font-semibold pulse-slow">
+        <span id="banner-text"></span>
+    </div>
+
+    <!-- Error Banner -->
+    <div id="error-banner" class="hidden bg-yellow-700 text-white text-center py-2">
+        <span id="error-text"></span>
+    </div>
+
+    <main class="max-w-5xl mx-auto px-4 py-6">
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div id="card-status" class="bg-gray-900 rounded-xl p-4 border border-gray-800 transition-colors">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Status</div>
+                <div id="val-status" class="text-2xl font-bold">—</div>
+                <div id="sub-status" class="text-gray-500 text-xs mt-1"></div>
+            </div>
+            <div id="card-battery" class="bg-gray-900 rounded-xl p-4 border border-gray-800 transition-colors">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Battery</div>
+                <div id="val-battery" class="text-2xl font-bold">—</div>
+                <div id="sub-battery" class="text-gray-500 text-xs mt-1"></div>
+            </div>
+            <div id="card-load" class="bg-gray-900 rounded-xl p-4 border border-gray-800 transition-colors">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Load</div>
+                <div id="val-load" class="text-2xl font-bold">—</div>
+            </div>
+            <div id="card-runtime" class="bg-gray-900 rounded-xl p-4 border border-gray-800 transition-colors">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Runtime</div>
+                <div id="val-runtime" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Input</div>
+                <div id="val-input-v" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Output</div>
+                <div id="val-output-v" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Power</div>
+                <div id="val-power" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Temperature</div>
+                <div id="val-temp" class="text-2xl font-bold">—</div>
+            </div>
+        </div>
+
+        <!-- Range Selector -->
+        <div class="flex gap-2 mb-4">
+            <button onclick="setRange('1h')" data-range="1h" class="range-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">1h</button>
+            <button onclick="setRange('12h')" data-range="12h" class="range-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">12h</button>
+            <button onclick="setRange('24h')" data-range="24h" class="range-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-wings text-white">24h</button>
+            <button onclick="setRange('7d')" data-range="7d" class="range-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors">7d</button>
+        </div>
+
+        <!-- Charts -->
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800 mb-4">
+            <h2 class="text-sm font-medium text-gray-400 mb-3">Battery %</h2>
+            <canvas id="chart-battery"></canvas>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800 mb-4">
+            <h2 class="text-sm font-medium text-gray-400 mb-3">Load %</h2>
+            <canvas id="chart-load"></canvas>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800 mb-8">
+            <h2 class="text-sm font-medium text-gray-400 mb-3">Input Voltage</h2>
+            <canvas id="chart-voltage"></canvas>
+        </div>
+    </main>
+
+    <footer class="text-center text-gray-600 text-xs pb-6">
+        ⚡ Keeping the basement alive since DTE won't.
+    </footer>
+
+    <script>
+        let currentRange = '24h';
+        let batteryChart, loadChart, voltageChart;
+
+        const STATUS_MAP = {
+            'OL': { text: "DTE's Holding It Together", color: 'border-green-500', bg: 'bg-green-500/10' },
+            'OB': { text: 'Covering for DTE', color: 'border-red-500', bg: 'bg-red-500/10' },
+            'OB LB': { text: "Covering for DTE — Clock's Ticking", color: 'border-red-500', bg: 'bg-red-500/10' },
+            'OL CHRG': { text: 'Back on Grid — Recharging', color: 'border-yellow-500', bg: 'bg-yellow-500/10' },
+            'OB DISCHRG': { text: 'Covering for DTE', color: 'border-red-500', bg: 'bg-red-500/10' },
+        };
+
+        function formatRuntime(seconds) {
+            if (seconds == null) return '—';
+            const s = Number(seconds);
+            if (s >= 3600) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'min remaining';
+            if (s >= 60) return Math.floor(s / 60) + ' min remaining';
+            return s + 's remaining';
+        }
+
+        function thresholdClasses(value, greenMax, yellowMax) {
+            if (value == null) return '';
+            if (value > greenMax) return 'border-green-500 bg-green-500/10';
+            if (value > yellowMax) return 'border-yellow-500 bg-yellow-500/10';
+            return 'border-red-500 bg-red-500/10';
+        }
+
+        function applyCardStyle(id, classes) {
+            const el = document.getElementById(id);
+            el.className = el.className.replace(/border-\S+/g, '').replace(/bg-\S+\/10/g, '');
+            el.classList.add('bg-gray-900', 'rounded-xl', 'p-4', 'border', 'transition-colors', ...classes.split(' ').filter(Boolean));
+        }
+
+        async function fetchStatus() {
+            try {
+                const resp = await fetch('/api/status');
+                const data = await resp.json();
+                if (data.status === 'error') {
+                    document.getElementById('error-banner').classList.remove('hidden');
+                    document.getElementById('error-text').textContent = data.message;
+                    return;
+                }
+                document.getElementById('error-banner').classList.add('hidden');
+
+                const status = data.ups_status || 'UNKNOWN';
+                const info = STATUS_MAP[status] || { text: status, color: 'border-gray-500', bg: 'bg-gray-500/10' };
+
+                document.getElementById('val-status').textContent = info.text;
+                applyCardStyle('card-status', info.color + ' ' + info.bg);
+
+                const isOnBattery = status.includes('OB');
+                document.getElementById('body').classList.toggle('on-battery', isOnBattery);
+                const banner = document.getElementById('banner');
+                if (isOnBattery) {
+                    banner.classList.remove('hidden');
+                    document.getElementById('banner-text').textContent = info.text;
+                } else {
+                    banner.classList.add('hidden');
+                }
+
+                const charge = data.battery_charge;
+                document.getElementById('val-battery').textContent = charge != null ? (charge === 100 ? 'Topped Off' : charge + '%') : '—';
+                document.getElementById('sub-battery').textContent = charge != null && charge < 100 ? charge + '%' : '';
+                applyCardStyle('card-battery', thresholdClasses(charge, 50, 20));
+
+                const load = data.ups_load;
+                document.getElementById('val-load').textContent = load != null ? load + '%' : '—';
+                applyCardStyle('card-load', thresholdClasses(load != null ? 100 - load : null, 40, 20));
+
+                document.getElementById('val-runtime').textContent = formatRuntime(data.battery_runtime);
+
+                document.getElementById('val-input-v').textContent = data.input_voltage != null ? data.input_voltage + ' V' : '—';
+                document.getElementById('val-output-v').textContent = data.output_voltage != null ? data.output_voltage + ' V' : '—';
+                document.getElementById('val-power').textContent = data.ups_realpower != null ? data.ups_realpower + ' W' : '—';
+                document.getElementById('val-temp').textContent = data.ups_temperature != null ? data.ups_temperature + ' °C' : '—';
+            } catch (e) {
+                document.getElementById('error-banner').classList.remove('hidden');
+                document.getElementById('error-text').textContent = 'Failed to reach dashboard API';
+            }
+        }
+
+        const chartOpts = (label, suggestedMin, suggestedMax) => ({
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 3,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { tooltipFormat: 'MMM d, h:mm a' },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#666', maxTicksLimit: 8 },
+                },
+                y: {
+                    suggestedMin, suggestedMax,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#666' },
+                },
+            },
+        });
+
+        function initCharts() {
+            const mkDataset = (label) => ({
+                label,
+                data: [],
+                borderColor: '#CE1126',
+                backgroundColor: 'rgba(206,17,38,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2,
+            });
+
+            batteryChart = new Chart(document.getElementById('chart-battery'), {
+                type: 'line', data: { datasets: [mkDataset('Battery %')] },
+                options: chartOpts('Battery %', 0, 105),
+            });
+            loadChart = new Chart(document.getElementById('chart-load'), {
+                type: 'line', data: { datasets: [mkDataset('Load %')] },
+                options: chartOpts('Load %', 0, 100),
+            });
+            voltageChart = new Chart(document.getElementById('chart-voltage'), {
+                type: 'line', data: { datasets: [mkDataset('Input Voltage')] },
+                options: chartOpts('Voltage', 100, 130),
+            });
+        }
+
+        async function fetchHistory() {
+            try {
+                const resp = await fetch(`/api/history?range=${currentRange}`);
+                const data = await resp.json();
+                if (data.status === 'error' || !data.readings) return;
+
+                const readings = data.readings;
+                batteryChart.data.datasets[0].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.battery_charge }));
+                loadChart.data.datasets[0].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.ups_load }));
+                voltageChart.data.datasets[0].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.input_voltage }));
+
+                batteryChart.update('none');
+                loadChart.update('none');
+                voltageChart.update('none');
+            } catch (e) {
+                console.error('Failed to fetch history:', e);
+            }
+        }
+
+        function setRange(range) {
+            currentRange = range;
+            document.querySelectorAll('.range-btn').forEach(btn => {
+                if (btn.dataset.range === range) {
+                    btn.className = 'range-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-wings text-white';
+                } else {
+                    btn.className = 'range-btn px-4 py-1.5 rounded-lg text-sm font-medium bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors';
+                }
+            });
+            fetchHistory();
+        }
+
+        initCharts();
+        fetchStatus();
+        fetchHistory();
+        setInterval(fetchStatus, 10000);
+        setInterval(fetchHistory, 60000);
+    </script>
+</body>
+</html>

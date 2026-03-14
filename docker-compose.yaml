@@ -1,0 +1,31 @@
+services:
+  nut:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nut-prod
+    privileged: true
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb:rw
+      - ./conf/nut.conf:/etc/nut/nut.conf
+      - ./conf/ups.conf:/etc/nut/ups.conf
+      - ./conf/upsd.conf:/etc/nut/upsd.conf
+      - ./conf/upsd.users:/etc/nut/upsd.users
+    ports:
+      - "3493:3493"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "upsc", "eaton@localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - iot
+
+networks:
+  iot:
+    external: true

@@ -1,0 +1,8 @@
+[admin]
+    password = upsadmin
+    actions = SET
+    instcmds = ALL
+
+[monitor]
+    password = upsmonitor
+    upsmon master

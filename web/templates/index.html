@@ -100,7 +100,7 @@
             <canvas id="chart-load"></canvas>
         </div>
         <div class="bg-gray-900 rounded-xl p-4 border border-gray-800 mb-8">
-            <h2 class="text-sm font-medium text-gray-400 mb-3">Input Voltage</h2>
+            <h2 class="text-sm font-medium text-gray-400 mb-3">Voltage (Input vs Output)</h2>
             <canvas id="chart-voltage"></canvas>
         </div>
     </main>
@@ -238,9 +238,14 @@
                 options: chartOpts('Load %', 0, 100),
             });
             voltageChart = new Chart(document.getElementById('chart-voltage'), {
-                type: 'line', data: { datasets: [mkDataset('Input Voltage')] },
-                options: chartOpts('Voltage', 100, 130),
+                type: 'line', data: { datasets: [mkDataset('Input'), mkDataset('Output')] },
+                options: {
+                    ...chartOpts('Voltage', 100, 130),
+                    plugins: { legend: { display: true, labels: { color: '#999', boxWidth: 12 } } },
+                },
             });
+            voltageChart.data.datasets[1].borderColor = '#4AAED9';
+            voltageChart.data.datasets[1].backgroundColor = 'rgba(74,174,217,0.1)';
         }
 
         async function fetchHistory() {
@@ -253,6 +258,7 @@
                 batteryChart.data.datasets[0].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.battery_charge }));
                 loadChart.data.datasets[0].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.ups_load }));
                 voltageChart.data.datasets[0].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.input_voltage }));
+                voltageChart.data.datasets[1].data = readings.map(r => ({ x: new Date(r.timestamp), y: r.output_voltage }));
 
                 batteryChart.update('none');
                 loadChart.update('none');

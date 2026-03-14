@@ -183,7 +183,13 @@
                 document.getElementById('val-input-v').textContent = data.input_voltage != null ? data.input_voltage + ' V' : '—';
                 document.getElementById('val-output-v').textContent = data.output_voltage != null ? data.output_voltage + ' V' : '—';
                 document.getElementById('val-power').textContent = data.ups_realpower != null ? data.ups_realpower + ' W' : '—';
-                document.getElementById('val-temp').textContent = data.ups_temperature != null ? data.ups_temperature + ' °C' : '—';
+                if (data.ups_temperature != null) {
+                    const c = data.ups_temperature;
+                    const f = (c * 9/5 + 32).toFixed(1);
+                    document.getElementById('val-temp').textContent = c + '°C / ' + f + '°F';
+                } else {
+                    document.getElementById('val-temp').textContent = '—';
+                }
             } catch (e) {
                 document.getElementById('error-banner').classList.remove('hidden');
                 document.getElementById('error-text').textContent = 'Failed to reach dashboard API';

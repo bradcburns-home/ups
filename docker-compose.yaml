@@ -10,10 +10,10 @@ services:
       - seccomp:unconfined
     volumes:
       - /dev/bus/usb:/dev/bus/usb:rw
-      - ./conf/nut.conf:/etc/nut/nut.conf
-      - ./conf/ups.conf:/etc/nut/ups.conf
-      - ./conf/upsd.conf:/etc/nut/upsd.conf
-      - ./conf/upsd.users:/etc/nut/upsd.users
+      - ./conf/nut.conf:/etc/nut/nut.conf:ro
+      - ./conf/ups.conf:/etc/nut/ups.conf:ro
+      - ./conf/upsd.conf:/etc/nut/upsd.conf:ro
+      - ./conf/upsd.users:/etc/nut/upsd.users:ro
     ports:
       - "3493:3493"
     restart: unless-stopped
@@ -40,7 +40,7 @@ services:
       - NUT_UPS_NAME=eaton
       - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/service-account.json
     volumes:
-      - /srv/shared/mosquitto/secrets/burns-agentspace-40a6a96a259d.json:/app/secrets/service-account.json:ro
+      - ./web/secrets/burns-agentspace-ac557c550db6.json:/app/secrets/service-account.json:ro
     ports:
       - "8308:8000"
     restart: unless-stopped

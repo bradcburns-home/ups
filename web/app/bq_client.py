@@ -43,8 +43,6 @@ def query_history(
     if not delta:
         return {"status": "error", "message": f"Invalid range '{time_range}'. Use: 1h, 12h, 24h, 7d", "retryable": False}
 
-    cutoff = (datetime.now(tz) - delta).isoformat()
-
     if metric == "all":
         cols = "timestamp, " + ", ".join(sorted(_ALLOWED_METRICS))
     elif metric in _ALLOWED_METRICS:
@@ -69,7 +67,8 @@ def query_history(
         {sample_clause}
         ORDER BY timestamp ASC
     """
-    params = [bigquery.ScalarQueryParameter("cutoff", "STRING", cutoff)]
+    cutoff_dt = datetime.now(tz) - delta
+    params = [bigquery.ScalarQueryParameter("cutoff", "TIMESTAMP", cutoff_dt)]
     job_config = bigquery.QueryJobConfig(
         query_parameters=params,
         labels={"service": "ups-web"},

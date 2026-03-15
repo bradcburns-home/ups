@@ -9,7 +9,8 @@ RUN apt-get update \
     && chown nut:nut /run/nut
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY nut-notify.sh /usr/local/bin/nut-notify.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/nut-notify.sh
 
 EXPOSE 3493
 

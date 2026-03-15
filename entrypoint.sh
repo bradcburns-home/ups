@@ -18,4 +18,12 @@ echo "Starting UPS driver..."
 upsdrvctl -u root start
 
 echo "Starting upsd in foreground..."
-exec upsd -D -u root
+upsd -D -u root &
+UPSD_PID=$!
+
+sleep 2
+
+echo "Starting upsmon..."
+upsmon -u root
+
+wait $UPSD_PID

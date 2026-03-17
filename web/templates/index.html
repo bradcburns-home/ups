@@ -153,7 +153,8 @@
                 }
                 document.getElementById('error-banner').classList.add('hidden');
 
-                const status = data.ups_status || 'UNKNOWN';
+                let status = data.ups_status || 'UNKNOWN';
+                if (status === 'OL CHRG' && data.battery_charge >= 100) status = 'OL';
                 const info = STATUS_MAP[status] || { text: status, color: 'border-gray-500', bg: 'bg-gray-500/10' };
 
                 document.getElementById('val-status').textContent = info.text;
